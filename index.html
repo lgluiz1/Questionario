@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste Saúde Mental - Quick Delivery</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <style>
+        body { background-color: #f4f7f6; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .card { border: none; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+        .btn-quick { background-color: #e63946; color: white; font-weight: bold; border-radius: 8px; padding: 12px; transition: 0.3s; }
+        .btn-quick:hover { background-color: #c12e3a; color: white; transform: translateY(-2px); }
+        .stepper { display: none; }
+        .stepper.active { display: block; }
+        .form-label { font-weight: 600; color: #444; margin-bottom: 8px; }
+        .instruction-text { background: #fff3f3; padding: 15px; border-left: 5px solid #e63946; border-radius: 5px; margin-bottom: 20px; font-size: 0.9rem; }
+        .badge-custom { font-size: 0.85rem; padding: 5px 10px; }
+        .footer-credits { font-size: 0.75rem; 
+            color: #888; 
+            margin-top: 25px; 
+            line-height: 1.4; 
+            border-top: 1px solid #eee; }
+        .footer-credits strong { color: #555; }
+        #loadingModal .modal-content { background: none; border: none; }
+        @media print {
+    #contentToPrint {
+        width: 100%;
+        margin: 0;
+        padding: 0;
+    }
+        
+}
+/* Estilo para garantir que o cabeçalho do PDF fique no topo e centralizado */
+.pdf-header-print {
+    text-align: center;
+    margin-bottom: 20px;
+}
+    </style>
+</head>
+<body>
+
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-9 col-lg-7">
+            <div class="card p-4">
+                <div class="text-center mb-4">
+                    <img src="https://quickdelivery.com.br/wp-content/uploads/2025/09/logo-quick-delivery-solucoes-em-logistica.webp" alt="logo-quick-delivery-solucoes-em-logistica">
+                    <h2 class="text-danger fw-bold">Saúde Mental no Dia a Dia</h2>
+                    <p class="text-muted text-uppercase small fw-bold">Grupo Quick Delivery</p>
+                </div>
+
+                <form id="healthQuizForm">
+                    <div id="step1" class="stepper active">
+                        <div class="instruction-text">
+                            <strong>Instrução:</strong> Não existe resposta certa ou errada. Responda como a situação se apresenta hoje na sua vida.
+                        </div>
+                        <h5 class="mb-4 text-primary border-bottom pb-2">Parte 1: Como está sua vida HOJE?</h5>
+                        <div id="questions-current"></div>
+                        <button type="button" class="btn btn-quick w-100 mt-4" onclick="changeStep(2)">Ir para Parte 2 (O Ideal)</button>
+                        <div class="footer-credits text-center mt-4 pt-3">
+                            <div>Questionário: <strong>Gilberto Ribeiro</strong></div>
+                            <div>Desenvolvido por: <strong>Luiz Gustavo</strong></div>
+                            <div class="fw-bold mt-1 text-danger">Quick Delivery © 2026</div>
+                        </div>
+                    </div>
+
+                    <div id="step2" class="stepper">
+                        <div class="instruction-text">
+                            <strong>Instrução:</strong> Agora, responda tendo em vista o ideal. O que seria "aceitável" em uma vida equilibrada? 
+                        </div>
+                        <h5 class="mb-4 text-primary border-bottom pb-2">Parte 2: Como você GOSTARIA que fosse?</h5>
+                        <div id="questions-ideal"></div>
+                        <button type="button" class="btn btn-quick w-100 mt-4" onclick="openIdModal()">Finalizar e Ver Resultado</button>
+                        <div class="footer-credits text-center mt-4 pt-3">
+                            <div>Questionário: <strong>Gilberto Ribeiro</strong></div>
+                            <div>Desenvolvido por: <strong>Luiz Gustavo</strong></div>
+                            <div class="fw-bold mt-1 text-danger">Quick Delivery © 2026</div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="identificationModal" data-bs-backdrop="static" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">Identificação Final</h5>
+            </div>
+            <div class="modal-body">
+                <p>Para salvar seu progresso e gerar o comparativo, informe seus dados:</p>
+                <div class="mb-3">
+                    <label class="form-label">Nome Completo:</label>
+                    <input type="text" id="userName" class="form-control" placeholder="Seu nome">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Estado/Filial:</label>
+                    <select id="userBranch" class="form-select">
+                        <option value="RJ">Rio de Janeiro</option>
+                        <option value="SP">São Paulo</option>
+                        <option value="MG">Minas Gerais</option>
+                        <option value="OUTRO">Outro</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-success w-100" onclick="processAndSend()">Gerar Resultado e Salvar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="loadingModal" data-bs-backdrop="static" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered text-center">
+        <div class="modal-content">
+            <div class="spinner-border text-danger mx-auto" style="width: 3rem; height: 3rem;" role="status"></div>
+            <h4 class="text-white mt-3">Analisando seu Autoconhecimento...</h4>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="resultModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title">Sua Reflexão Final</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" onclick="location.reload()"></button>
+            </div>
+            <div class="modal-body" id="resultBody"></div>
+            <div class="modal-footer d-flex gap-2">
+                <button type="button" class="btn btn-primary flex-grow-1" onclick="generatePDF()">Salvar em PDF</button>
+                <button type="button" class="btn btn-danger flex-grow-1" onclick="location.reload()">Concluir e Fechar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+    const quizMetadata = [
+        { id: 'irritacao', text: 'Quantas vezes por dia você se irrita?' },
+        { id: 'discutir', text: 'Quantas vezes por semana você discute com pessoas queridas?' },
+        { id: 'alegre', text: 'Quantas vezes por dia você está alegre?' },
+        { id: 'triste', text: 'Quantas vezes por dia você se sente triste?' },
+        { id: 'raiva', text: 'Quantas vezes por dia você está com raiva?' },
+        { id: 'remedio', text: 'Quantas vezes por mês você toma remédio?' },
+        { id: 'saude_fisica', text: 'Quantas vezes por semana cuida da saúde física?' },
+        { id: 'sono', text: 'Quantas vezes por semana sente que repôs o sono?' }
+    ];
+
+    const optionsText = ["Nenhuma vez", "1 vez", "2 vezes", "3 vezes", "4 vezes", "5 vezes ou mais"];
+
+    const idModal = new bootstrap.Modal(document.getElementById('identificationModal'));
+    const loadModal = new bootstrap.Modal(document.getElementById('loadingModal'));
+    const resModal = new bootstrap.Modal(document.getElementById('resultModal'));
+
+    function buildQuiz(containerId, mode) {
+        const container = document.getElementById(containerId);
+        quizMetadata.forEach(q => {
+            let labelText = mode === 'ideal' ? q.text.replace('você', 'você "gostaria" de') : q.text;
+            let html = `<div class="mb-4">
+                <label class="form-label small">${labelText}</label>
+                <select class="form-select shadow-sm" name="${q.id}_${mode}">`;
+            optionsText.forEach((opt, i) => html += `<option value="${i}">${opt}</option>`);
+            html += `</select></div>`;
+            container.innerHTML += html;
+        });
+    }
+
+    buildQuiz('questions-current', 'real');
+    buildQuiz('questions-ideal', 'ideal');
+
+    function changeStep(step) {
+        document.querySelectorAll('.stepper').forEach(s => s.classList.remove('active'));
+        document.getElementById('step' + step).classList.add('active');
+        window.scrollTo(0, 0);
+    }
+
+    function openIdModal() { idModal.show(); }
+
+    async function processAndSend() {
+        const name = document.getElementById('userName').value.trim();
+        const branch = document.getElementById('userBranch').value;
+        if (!name) return alert("Por favor, informe seu nome.");
+
+        idModal.hide();
+        loadModal.show();
+
+        const formData = new FormData(document.getElementById('healthQuizForm'));
+        const payload = {
+            nome: name,
+            filial: branch,
+            data: new Date().toLocaleString('pt-BR'),
+            respostas: {}
+        };
+        formData.forEach((value, key) => payload.respostas[key] = value);
+
+        await new Promise(r => setTimeout(r, 1500));
+
+        const scriptURL = 'https://script.google.com/macros/s/AKfycbydNGVCWyqWc819lyIe45uOJ7b_PEbvx-wVbZI8Hv9x3lheMrrnqyHv7AsZwqsqXN1W/exec';
+
+        try {
+            await fetch(scriptURL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(payload) });
+            loadModal.hide();
+            showFinalResults(payload);
+        } catch (e) {
+            loadModal.hide();
+            alert("Erro ao salvar dados.");
+        }
+    }
+
+    function showFinalResults(payload) {
+        let html = `
+            <div id="contentToPrint">
+                <div class="text-center mb-4 pdf-only">
+                    <h3 style="color: #e63946;">Relatório de Autoconhecimento</h3>
+                    <p><b>Colaborador:</b> ${payload.nome} | <b>Filial:</b> ${payload.filial}<br>
+                    <b>Data:</b> ${payload.data}</p>
+                    <hr>
+                </div>
+                <div class="alert alert-info py-2 small">Olá <b>${payload.nome}</b>, veja a comparação entre sua realidade e o ideal desejado:</div>`;
+        
+        quizMetadata.forEach(q => {
+            const r = parseInt(payload.respostas[q.id + '_real']);
+            const i = parseInt(payload.respostas[q.id + '_ideal']);
+            const isDifferent = r !== i;
+
+            html += `
+                <div class="p-3 mb-2 rounded border-start border-4 ${isDifferent ? 'border-warning bg-light' : 'border-success'}" style="page-break-inside: avoid;">
+                    <div class="small fw-bold text-dark mb-1 text-uppercase">${q.text}</div>
+                    <div class="d-flex justify-content-between">
+                        <span>Hoje: <span class="badge bg-secondary badge-custom">${optionsText[r]}</span></span>
+                        <span>Ideal: <span class="badge bg-success badge-custom">${optionsText[i]}</span></span>
+                    </div>
+                </div>`;
+        });
+
+        html += `
+                <div class="mt-4 p-3 bg-danger text-white rounded">
+                    <h6>Reflexão Final:</h6>
+                    <p class="mb-0 small italic text-white">"A maneira como você tem levado sua vida tem sido favorável para que você tenha saúde mental? O que falta?" </p>
+                </div>
+            </div>`;
+
+        document.getElementById('resultBody').innerHTML = html;
+        resModal.show();
+    }
+
+ function generatePDF() {
+    const element = document.getElementById('contentToPrint');
+    
+    // Configurações para evitar cortes e centralizar
+    const opt = {
+        margin: [15, 10, 15, 10], // [topo, esquerda, baixo, direita] em mm
+        filename: `Saude_Mental_${document.getElementById('userName').value || 'resultado'}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { 
+            scale: 2, 
+            useCORS: true,
+            letterRendering: true,
+            scrollY: 0 // Garante que comece do topo do elemento
+        },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] } // Evita cortar elementos no meio
+    };
+
+    // Gera o PDF
+    html2pdf().set(opt).from(element).save();
+}
+</script>
+</body>
+</html>
