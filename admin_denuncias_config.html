@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configurações de Ouvidoria - Quick Delivery</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        body { background-color: #f8f9fa; font-family: 'Segoe UI', sans-serif; }
+        .navbar { background-color: #e63946; }
+        .navbar-brand { color: white !important; }
+        .card { border-radius: 12px; border: none; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+        .btn-quick { background-color: #e63946; color: white; }
+    </style>
+</head>
+<body>
+
+<nav class="navbar navbar-expand-lg mb-4">
+    <div class="container">
+        <a class="navbar-brand fw-bold" href="admin_dashboard.html">
+            <img src="https://quickdelivery.com.br/wp-content/uploads/2025/09/logo-quick-delivery-solucoes-em-logistica.webp" style="max-height: 35px; filter: brightness(0) invert(1);">
+        </a>
+        <div class="ms-auto">
+            <a href="admin_denuncias.html" class="btn btn-sm btn-outline-light me-2">Denúncias</a>
+            <button onclick="logout()" class="btn btn-sm btn-outline-light">Sair</button>
+        </div>
+    </div>
+</nav>
+
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3 class="text-danger fw-bold m-0"><i class="bi bi-gear-fill me-2"></i>Configurações da Ouvidoria</h3>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6 mb-4">
+            <div class="card p-4">
+                <h5 class="fw-bold mb-3">Categorias de Denúncia</h5>
+                <p class="text-muted small">Defina os tipos de problemas que o colaborador pode selecionar.</p>
+                <div id="categoryList" class="mb-3"></div>
+                <div class="input-group">
+                    <input type="text" id="newCategoryName" class="form-control" placeholder="Ex: Assédio Moral">
+                    <button class="btn btn-quick" onclick="add('category')">Adicionar</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 mb-4">
+            <div class="card p-4">
+                <h5 class="fw-bold mb-3">Níveis de Urgência</h5>
+                <p class="text-muted small">Defina os níveis de gravidade da denúncia.</p>
+                <div id="urgencyList" class="mb-3"></div>
+                <div class="row g-2">
+                    <div class="col-8"><input type="text" id="newUrgencyName" class="form-control" placeholder="Ex: Urgente"></div>
+                    <div class="col-2"><input type="color" id="urgColor" class="form-control form-control-color w-100" value="#dc3545"></div>
+                    <div class="col-2"><button class="btn btn-quick w-100" onclick="add('urgency')">Ok</button></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const CONFIG = { API_URL: 'https://quickdelivery.luizgustavo.tech/api' };
+
+    async function loadConfig() {
+        try {
+            const res = await fetch(`${CONFIG.API_URL}/complaints/options/`);
+            const data = await res.json();
+            
+            const catList = document.getElementById('categoryList');
+            catList.innerHTML = '';
+            data.categories.forEach(c => {
+                catList.innerHTML += `<div class="p-2 mb-1 bg-light rounded border">${c.name}</div>`;
+            });
+
+            const urgList = document.getElementById('urgencyList');
+            urgList.innerHTML = '';
+            data.urgencies.forEach(u => {
+                urgList.innerHTML += `<div class="p-2 mb-1 bg-light rounded border d-flex justify-content-between align-items-center">${u.name} <span class="badge" style="background-color: ${u.color}; width: 20px; height: 10px;"></span></div>`;
+            });
+        } catch (err) { console.error(err); }
+    }
+
+    async function add(type) {
+        const payload = { target: type };
+        if (type === 'category') {
+            payload.name = document.getElementById('newCategoryName').value;
+        } else {
+            payload.name = document.getElementById('newUrgencyName').value;
+            payload.color = document.getElementById('urgColor').value;
+        }
+
+        try {
+            await fetch(`${CONFIG.API_URL}/admin/complaints/config/`, {
+                method: 'POST',
+                headers: { 
+                    'Authorization': `Bearer ${localStorage.getItem('admin_token')}`,
+                    'Content-Type': 'application/json' 
+                },
+                body: JSON.stringify(payload)
+            });
+            document.getElementById('newCategoryName').value = '';
+            document.getElementById('newUrgencyName').value = '';
+            loadConfig();
+        } catch (err) { console.error(err); }
+    }
+
+    loadConfig();
+    window.logout = function() { localStorage.removeItem('admin_token'); location.href='admin_login.html'; };
+</script>
+</body>
+</html>

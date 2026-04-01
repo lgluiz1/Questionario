@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Avaliação - Quick Delivery</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f4f7f6; font-family: 'Segoe UI', sans-serif; }
+        .card { border: none; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+        .btn-quick { background-color: #e63946; color: white; font-weight: bold; }
+        .btn-quick:hover { background-color: #c12e3a; color: white; }
+        .question-item { border-bottom: 1px solid #eee; padding-bottom: 15px; margin-bottom: 20px; }
+        .question-item:last-child { border-bottom: none; }
+    </style>
+</head>
+<body>
+
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-7">
+            <div id="contentLoading" class="text-center py-5">
+                <div class="spinner-border text-danger" role="status"></div>
+                <p class="mt-2">Carregando avaliação...</p>
+            </div>
+
+            <div id="noEvalArea" class="d-none text-center py-5 card">
+                <h3 class="text-danger fw-bold">Avaliação Indisponível</h3>
+                <p class="text-muted">Desculpe, não há uma avaliação ativa para este curso no momento.</p>
+                <p>Por favor, aguarde o período de resposta informado pelo gestor.</p>
+            </div>
+
+            <div id="evalFormArea" class="d-none card p-4 mb-5">
+                <div class="text-center mb-4">
+                    <img src="https://quickdelivery.com.br/wp-content/uploads/2025/09/logo-quick-delivery-solucoes-em-logistica.webp" style="max-width: 150px;">
+                    <h3 class="text-danger fw-bold mt-3" id="evalTitleDisplay">...</h3>
+                    <p class="text-muted" id="courseNameDisplay">...</p>
+                </div>
+
+                <form id="submissionForm">
+                    <div class="row mb-4">
+                        <div class="col-md-12 mb-3">
+                            <label class="form-label fw-bold">Nome Completo</label>
+                            <input type="text" id="nome" class="form-control" placeholder="Seu nome" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">Filial</label>
+                            <select id="filial" class="form-select" required>
+                                <option value="">Carregando filiais...</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">Email</label>
+                            <input type="email" id="email" class="form-control" placeholder="seu@email.com" required>
+                        </div>
+                    </div>
+
+                    <hr class="mb-4">
+                    
+                    <div id="questionsContainer"></div>
+
+                    <button type="submit" class="btn btn-quick w-100 py-3 mt-4">Enviar Avaliação</button>
+                    <div id="loadingBtn" class="d-none text-center mt-3"><div class="spinner-border text-danger"></div></div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="statusModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered text-center">
+        <div class="modal-content p-4">
+            <h4 class="mb-3 text-danger fw-bold" id="statusTitle">Sucesso</h4>
+            <p id="statusBody"></p>
+            <button type="button" class="btn btn-quick w-100" data-bs-dismiss="modal">Fechar</button>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    const CONFIG = { 
+        API_URL: 'https://quickdelivery.luizgustavo.tech/api',
+        API_KEY: 'YOUR_X_API_KEY_HERE'
+    };
+    const urlParams = new URLSearchParams(window.location.search);
+    const courseSlug = urlParams.get('curso');
+    let currentEvalId = null;
+
+    const statusModal = new bootstrap.Modal(document.getElementById('statusModal'));
+    function showStatus(title, body) {
+        document.getElementById('statusTitle').innerText = title;
+        document.getElementById('statusBody').innerText = body;
+        statusModal.show();
+    }
+
+    async function loadActiveEval() {
+        if (!courseSlug) {
+            document.getElementById('contentLoading').classList.add('d-none');
+            document.getElementById('noEvalArea').classList.remove('d-none');
+            return;
+        }
+
+        try {
+            const res = await fetch(`${CONFIG.API_URL}/active-evaluation/${courseSlug}/`, {
+                headers: { 'X-Api-Key': CONFIG.API_KEY }
+            });
+            const data = await res.json();
+            
+            document.getElementById('contentLoading').classList.add('d-none');
+            
+            if (!res.ok) {
+                document.getElementById('noEvalArea').classList.remove('d-none');
+                return;
+            }
+
+            currentEvalId = data.id;
+            document.getElementById('evalTitleDisplay').innerText = data.title;
+            document.getElementById('courseNameDisplay').innerText = data.course;
+            document.getElementById('evalFormArea').classList.remove('d-none');
+
+            const container = document.getElementById('questionsContainer');
+            container.innerHTML = '';
+            data.questions.forEach(q => {
+                container.innerHTML += `
+                    <div class="question-item">
+                        <label class="form-label fw-bold">${q.text}</label>
+                        <textarea class="form-control question-input" data-qid="${q.id}" rows="2" required placeholder="Sua resposta..."></textarea>
+                    </div>
+                `;
+            });
+
+        } catch (err) { console.error(err); }
+    }
+
+    document.getElementById('submissionForm').onsubmit = async (e) => {
+        e.preventDefault();
+        const answers = {};
+        document.querySelectorAll('.question-input').forEach(input => {
+            answers[input.dataset.qid] = input.value;
+        });
+
+        const payload = {
+            evaluation_id: currentEvalId,
+            nome: document.getElementById('nome').value,
+            filial: document.getElementById('filial').value,
+            email: document.getElementById('email').value,
+            answers: answers
+        };
+
+        try {
+            const res = await fetch(`${CONFIG.API_URL}/submit-evaluation/`, {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'X-Api-Key': CONFIG.API_KEY
+                },
+                body: JSON.stringify(payload)
+            });
+            if (res.ok) {
+                showStatus('Sucesso!', 'Sua avaliação foi enviada com sucesso. Obrigado!');
+                document.getElementById('submissionForm').reset();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            } else {
+                showStatus('Erro', 'Ocorreu um erro ao enviar suas respostas.');
+            }
+        } catch (err) { showStatus('Erro', 'Erro de conexão com o servidor.'); }
+    };
+
+    async function loadBranches() {
+        try {
+            const res = await fetch(`${CONFIG.API_URL}/branches/`, {
+                headers: { 'X-Api-Key': CONFIG.API_KEY }
+            });
+            const data = await res.json();
+            const select = document.getElementById('filial');
+            select.innerHTML = '<option value="">Selecione sua unidade...</option>';
+            data.branches.forEach(b => {
+                select.innerHTML += `<option value="${b.name}">${b.name}</option>`;
+            });
+        } catch (err) { console.error(err); }
+    }
+
+    loadActiveEval();
+    loadBranches();
+</script>
+</body>
+</html>
